@@ -30,7 +30,7 @@ class FoundationStereoDataset(torch_data.Dataset):
             self.transform = build_transform_by_cfg(transform_config)
             data_dirs = glob.glob(os.path.join(self.root, '*/dataset/data/'))
             for each_data_dir in data_dirs:
-                left_images = glob.glob(os.path.join(each_data_dir, 'left/rgb/*.jpg'))
+                left_images = glob.glob(os.path.join(each_data_dir, 'left/rgb/*.png'))
                 self._append_sample(left_images)
         else:
             self.transform = None
@@ -44,7 +44,7 @@ class FoundationStereoDataset(torch_data.Dataset):
         for each in left_images:
             data = {'left': each,
                     'right': each.replace('left', 'right'),
-                    'disp': each.replace('rgb', 'disparity').replace('.jpg', '.png')}
+                    'disp': each.replace('rgb', 'disparity')}
             self.data_list.append(data)
 
     def __getitem__(self, idx):
