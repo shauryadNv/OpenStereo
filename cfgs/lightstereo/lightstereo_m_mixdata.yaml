@@ -1,29 +1,50 @@
 DATA_CONFIG:
     DATA_INFOS:
         -   DATASET: SceneFlowDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_RIGHT_DISP: false
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: CREStereoDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_RIGHT_DISP: false
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: InStereo2KDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_RIGHT_DISP: false
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: VirtualKitti2Dataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_RIGHT_DISP: false
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: SintelDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_RIGHT_DISP: false
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: FoundationStereoDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_SUPER_PIXEL: false
 
         -   DATASET: Stereo4DDataset
+            DATA_SPLIT: {
+                TRAINING: None,
+            }
             RETURN_SUPER_PIXEL: false
 
     DATA_TRANSFORM:
