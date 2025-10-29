@@ -22,6 +22,7 @@ from .tartanair_dataset import TartanAirDataset
 from .vkitti2_dataset import VirtualKitti2Dataset
 from .carla_dataset import CarlaDataset
 from .foundationstereo import FoundationStereoDataset
+from .stereo4d import Stereo4DDataset
 from .dynamic_replica import DynamicReplicaDataset
 from .mono_dataset import MonoDataset
 from .realfill_dataset import RealfillDataset
@@ -46,6 +47,7 @@ __all__ = {
     'VirtualKitti2Dataset': VirtualKitti2Dataset,
     'FoundationStereoDataset': FoundationStereoDataset,
     'DynamicReplicaDataset': DynamicReplicaDataset,
+    'Stereo4DDataset': Stereo4DDataset,
     'CarlaDataset': CarlaDataset
 }
 
