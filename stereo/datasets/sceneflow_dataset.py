@@ -80,9 +80,9 @@ class SceneFlowDataset(DatasetTemplate):
             'left': left_img,  # [H, W, 3]
             'right': right_img,  # [H, W, 3]
             'disp': disp_img,  # [H, W]
+            'occ_mask': occ_mask,
         }
         if self.retrun_super_pixel and self.mode == 'training':
-            sample['occ_mask'] = occ_mask
             sample['super_pixel_label'] = super_pixel_label
             assert not sample['occ_mask'].any(), 'there is a True in Sceneflow occ mask'
         if self.retrun_pos and self.mode == 'training':
