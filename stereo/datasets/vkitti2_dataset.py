@@ -5,16 +5,53 @@ from PIL import Image
 from pathlib import Path
 from stereo.datasets.dataset_utils.readpfm import readpfm
 from .dataset_template import DatasetTemplate
+import glob
 
 
 class VirtualKitti2Dataset(DatasetTemplate):
     def __init__(self, data_info, data_cfg, mode):
         super().__init__(data_info, data_cfg, mode)
+        # If no list file provided, auto-scan dataset structure to build data_list (expects 4-tuple per sample)
+        if len(self.data_list) == 0:
+            self.data_list = self._scan_all_samples()
         self.return_right_disp = self.data_info.RETURN_RIGHT_DISP
         if hasattr(self.data_info, 'RETURN_SUPER_PIXEL'):
             self.retrun_super_pixel = self.data_info.RETURN_SUPER_PIXEL
         else:
             self.retrun_super_pixel = False
+
+    def _scan_all_samples(self):
+        samples = []
+        # Try common VKITTI2 layouts
+        candidate_patterns = [
+            # VKITTI2 official clones layout
+            os.path.join(self.root, '**', 'frames', 'rgb', 'Camera_0', '*.png'),
+            os.path.join(self.root, '**', 'rgb', 'Camera_0', '*.png'),
+            os.path.join(self.root, '**', 'rgb', 'left', '*.png'),
+        ]
+        left_imgs = []
+        for p in candidate_patterns:
+            left_imgs.extend(glob.glob(p, recursive=True))
+        for left_abs in left_imgs:
+            rel_left = os.path.relpath(left_abs, self.root)
+            # derive right rgb path
+            if ('rgb' + os.sep + 'Camera_0' + os.sep) in rel_left:
+                rel_right = rel_left.replace('rgb' + os.sep + 'Camera_0' + os.sep, 'rgb' + os.sep + 'Camera_1' + os.sep)
+                rel_disp_l = rel_left.replace('rgb' + os.sep + 'Camera_0' + os.sep, 'depth' + os.sep + 'Camera_0' + os.sep)
+                rel_disp_r = rel_left.replace('rgb' + os.sep + 'Camera_0' + os.sep, 'depth' + os.sep + 'Camera_1' + os.sep)
+            elif ('rgb' + os.sep + 'left' + os.sep) in rel_left:
+                rel_right = rel_left.replace('rgb' + os.sep + 'left' + os.sep, 'rgb' + os.sep + 'right' + os.sep)
+                rel_disp_l = rel_left.replace('rgb' + os.sep + 'left' + os.sep, 'depth' + os.sep + 'left' + os.sep)
+                rel_disp_r = rel_left.replace('rgb' + os.sep + 'left' + os.sep, 'depth' + os.sep + 'right' + os.sep)
+            else:
+                # unknown layout, skip
+                continue
+            right_abs = os.path.join(self.root, rel_right)
+            disp_l_abs = os.path.join(self.root, rel_disp_l)
+            disp_r_abs = os.path.join(self.root, rel_disp_r)
+            if os.path.exists(right_abs) and os.path.exists(disp_l_abs) and os.path.exists(disp_r_abs):
+                samples.append([rel_left, rel_right, rel_disp_l, rel_disp_r])
+        return samples
 
     def __getitem__(self, idx):
         item = self.data_list[idx]

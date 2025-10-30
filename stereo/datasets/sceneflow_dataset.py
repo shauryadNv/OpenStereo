@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from pathlib import Path
+import glob
 from stereo.datasets.dataset_utils.readpfm import readpfm
 from .dataset_template import DatasetTemplate
 from stereo.utils.common_utils import get_pos_fullres
@@ -13,6 +14,9 @@ from stereo.utils.common_utils import get_pos_fullres
 class SceneFlowDataset(DatasetTemplate):
     def __init__(self, data_info, data_cfg, mode):
         super().__init__(data_info, data_cfg, mode)
+        # If no list file provided, auto-scan dataset structure to build data_list
+        if len(self.data_list) == 0:
+            self.data_list = self._scan_all_samples()
         if hasattr(self.data_info, 'RETURN_POS'):
             self.retrun_pos = self.data_info.RETURN_POS
         else:
@@ -22,6 +26,30 @@ class SceneFlowDataset(DatasetTemplate):
         else:
             self.retrun_super_pixel = False
         self.return_right_disp = self.data_info.RETURN_RIGHT_DISP
+
+    def _scan_all_samples(self):
+        samples = []
+        # search both finalpass and cleanpass
+        patterns = [
+            os.path.join(self.root, '**', 'frames_finalpass', '**', 'left', '*.png'),
+            os.path.join(self.root, '**', 'frames_cleanpass', '**', 'left', '*.png'),
+        ]
+        left_imgs = []
+        for p in patterns:
+            left_imgs.extend(glob.glob(p, recursive=True))
+        for left_abs in left_imgs:
+            rel_left = os.path.relpath(left_abs, self.root)
+            rel_right = rel_left.replace(os.sep + 'left' + os.sep, os.sep + 'right' + os.sep)
+            if 'frames_finalpass' in rel_left:
+                rel_disp = rel_left.replace('frames_finalpass', 'disparity')
+            else:
+                rel_disp = rel_left.replace('frames_cleanpass', 'disparity')
+            rel_disp = rel_disp.rsplit('.', 1)[0] + '.pfm'
+            right_abs = os.path.join(self.root, rel_right)
+            disp_abs = os.path.join(self.root, rel_disp)
+            if os.path.exists(right_abs) and os.path.exists(disp_abs):
+                samples.append([rel_left, rel_right, rel_disp])
+        return samples
 
     def __getitem__(self, idx):
         item = self.data_list[idx]

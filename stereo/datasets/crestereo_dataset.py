@@ -5,16 +5,34 @@ from PIL import Image
 from pathlib import Path
 from .dataset_template import DatasetTemplate
 import cv2
+import glob
 
 
 class CREStereoDataset(DatasetTemplate):
     def __init__(self, data_info, data_cfg, mode):
         super().__init__(data_info, data_cfg, mode)
+        # If no list file provided, auto-scan dataset structure to build data_list
+        if len(self.data_list) == 0:
+            self.data_list = self._scan_all_samples()
         self.return_right_disp = self.data_info.RETURN_RIGHT_DISP
         if hasattr(self.data_info, 'RETURN_SUPER_PIXEL'):
             self.retrun_super_pixel = self.data_info.RETURN_SUPER_PIXEL
         else:
             self.retrun_super_pixel = False
+
+    def _scan_all_samples(self):
+        samples = []
+        # Search for files like *_left.jpg and corresponding *_left.disp.png
+        left_imgs = glob.glob(os.path.join(self.root, '**', '*_left.jpg'), recursive=True)
+        for left_abs in left_imgs:
+            rel_left = os.path.relpath(left_abs, self.root)
+            rel_right = rel_left.replace('_left.jpg', '_right.jpg')
+            rel_disp = rel_left.replace('_left.jpg', '_left.disp.png')
+            right_abs = os.path.join(self.root, rel_right)
+            disp_abs = os.path.join(self.root, rel_disp)
+            if os.path.exists(right_abs) and os.path.exists(disp_abs):
+                samples.append([rel_left, rel_right, rel_disp])
+        return samples
 
     def __getitem__(self, idx):
         item = self.data_list[idx]

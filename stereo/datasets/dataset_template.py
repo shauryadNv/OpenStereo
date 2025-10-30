@@ -22,20 +22,33 @@ class DatasetTemplate(torch_data.Dataset):
         self.mode = mode
         self.root = self.data_info.DATA_PATH
 
-        if self.mode.upper() in self.data_info.DATA_SPLIT:
-            self.split_file = self.data_info.DATA_SPLIT[self.mode.upper()]
+        # always build transform if available
+        try:
             transform_config = self.data_cfg.DATA_TRANSFORM[self.mode.upper()]
             self.transform = build_transform_by_cfg(transform_config)
-        else:
-            self.split_file = ''
+        except Exception:
             self.transform = None
 
+        # resolve split file (allow None/''/'None' → scan mode)
+        self.split_file = ''
+        try:
+            if hasattr(self.data_info, 'DATA_SPLIT') and self.mode.upper() in self.data_info.DATA_SPLIT:
+                split_val = self.data_info.DATA_SPLIT[self.mode.upper()]
+                if split_val is None:
+                    self.split_file = ''
+                else:
+                    self.split_file = str(split_val).strip()
+                    if self.split_file.lower() in ['none', 'null']:
+                        self.split_file = ''
+        except Exception:
+            self.split_file = ''
+
         self.data_list = []
-        if os.path.exists(self.split_file):
-            with open(self.split_file, 'r') as fp:
-                self.data_list.extend([x.strip().split(' ') for x in fp.readlines()])
-        else:
-            if len(self.split_file) != 0:
+        if isinstance(self.split_file, str) and len(self.split_file) > 0:
+            if os.path.exists(self.split_file):
+                with open(self.split_file, 'r') as fp:
+                    self.data_list.extend([x.strip().split(' ') for x in fp.readlines()])
+            else:
                 raise FileNotFoundError("[Errno 2] No such file or directory:" + self.split_file + ", You must modify the txt path in the yaml to your own.")
 
     def __len__(self):

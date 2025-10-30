@@ -5,16 +5,44 @@ import cv2
 from PIL import Image
 from pathlib import Path
 from .dataset_template import DatasetTemplate
+import glob
 
 
 class InStereo2KDataset(DatasetTemplate):
     def __init__(self, data_info, data_cfg, mode):
         super().__init__(data_info, data_cfg, mode)
+        # If no list file provided, auto-scan dataset structure to build data_list
+        if len(self.data_list) == 0:
+            self.data_list = self._scan_all_samples()
         self.return_right_disp = self.data_info.RETURN_RIGHT_DISP
         if hasattr(self.data_info, 'RETURN_SUPER_PIXEL'):
             self.retrun_super_pixel = self.data_info.RETURN_SUPER_PIXEL
         else:
             self.retrun_super_pixel = False
+
+    def _scan_all_samples(self):
+        samples = []
+        # Common InStereo2K layout has left.png/right.png and a left disparity png in the same folder
+        left_imgs = glob.glob(os.path.join(self.root, '**', 'left.png'), recursive=True)
+        for left_abs in left_imgs:
+            base_dir = os.path.dirname(left_abs)
+            right_abs = os.path.join(base_dir, 'right.png')
+            # try several common disparity file names
+            cand_names = [
+                'disp_left.png', 'left_disp.png', 'disparity_left.png', 'left_disparity.png', 'disp_L.png', 'disp.png'
+            ]
+            disp_abs = ''
+            for name in cand_names:
+                p = os.path.join(base_dir, name)
+                if os.path.exists(p):
+                    disp_abs = p
+                    break
+            if os.path.exists(right_abs) and os.path.exists(disp_abs):
+                rel_left = os.path.relpath(left_abs, self.root)
+                rel_right = os.path.relpath(right_abs, self.root)
+                rel_disp = os.path.relpath(disp_abs, self.root)
+                samples.append([rel_left, rel_right, rel_disp])
+        return samples
 
     def __getitem__(self, idx):
         item = self.data_list[idx]
