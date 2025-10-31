@@ -13,6 +13,19 @@ from stereo.modeling import build_trainer
 from stereo.utils.disp_color import disp_to_color
 from stereo.datasets.dataset_template import build_transform_by_cfg
 
+
+def writePFM(file, array):
+    import os
+    assert type(file) is str and type(array) is np.ndarray and \
+           os.path.splitext(file)[1] == ".pfm"
+    with open(file, 'wb') as f:
+        H, W = array.shape
+        headers = ["Pf\n", f"{W} {H}\n", "-1\n"]
+        for header in headers:
+            f.write(str.encode(header))
+        array = np.flip(array, axis=0).astype(np.float32)
+        f.write(array.tobytes())
+
 def parse_config():
     parser = argparse.ArgumentParser(description='arg parser')
     parser.add_argument('--dist_mode', action='store_true', default=False, help='torchrun ddp multi gpu')
@@ -20,8 +33,9 @@ def parse_config():
     # data
     parser.add_argument('--left_img_path', type=str, default=None)
     parser.add_argument('--right_img_path', type=str, default=None)
+    parser.add_argument('--save_path', type=str, default=None)
     parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained_model')
-    parser.add_argument('--savename', type=str, default=None)
+    # parser.add_argument('--savename', type=str, default=None)
 
     args = parser.parse_args()
     yaml_config = common_utils.config_loader(args.cfg_file)
@@ -82,10 +96,22 @@ def main():
         model_pred = model(sample)
 
     disp_pred = model_pred['disp_pred'].squeeze().cpu().numpy()
+    # Unpad to original size if padding was applied in the transform
+    if 'pad' in sample:
+        pad_top, pad_right, pad_bottom, pad_left = sample['pad']
+        h, w = disp_pred.shape[:2]
+        y2 = h - pad_bottom if pad_bottom > 0 else h
+        x2 = w - pad_right if pad_right > 0 else w
+        y1 = pad_top
+        x1 = pad_left
+        disp_pred = disp_pred[y1:y2, x1:x2]
+
+    os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
+    writePFM(args.save_path, disp_pred)
     img_color = disp_to_color(disp_pred, max_disp=192)
     img_color = img_color.astype('uint8')
     img_color = Image.fromarray(img_color)
-    img_color.save(args.savename)
+    img_color.save(args.save_path.replace('.pfm', '.png'))
 
 
 if __name__ == '__main__':
